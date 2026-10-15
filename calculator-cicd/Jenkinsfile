@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // TODO: change to your Docker Hub username
-        IMAGE = "YOUR_DOCKERHUB_USERNAME/calculator-app"
+        IMAGE = "ojaasss/calculator-app"
         TAG   = "${env.BUILD_NUMBER}"
     }
 
