@@ -5,6 +5,7 @@ pipeline {
         // TODO: change to your Docker Hub username
         IMAGE = "ojaasss/calculator-app"
         TAG   = "${env.BUILD_NUMBER}"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
