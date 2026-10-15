@@ -17,15 +17,19 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                sh 'docker build --build-arg APP_VERSION=$TAG -t $IMAGE:$TAG -t $IMAGE:latest .'
+                dir('Build Image'){
+                  sh 'docker build --build-arg APP_VERSION=$TAG -t $IMAGE:$TAG -t $IMAGE:latest .'
             }
         }
+    }
 
         stage('Test') {
             steps {
+	      dir('calculator-cicd'){
                 sh 'docker run --rm $IMAGE:$TAG pytest -q'
             }
         }
+    }
 
         stage('Push Image') {
             steps {
@@ -35,8 +39,9 @@ pipeline {
                                                   passwordVariable: 'DH_PASS')]) {
                     sh '''
                         echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-                        docker push $IMAGE:$TAG
-                        docker push $IMAGE:latest
+                        docker push "$IMAGE:$TAG"
+                        docker push "$IMAGE:latest"
+			docker logout
                     '''
                 }
             }
@@ -44,6 +49,7 @@ pipeline {
 
         stage('Deploy to Minikube') {
             steps {
+		dir('calculator-cicd'){
                 sh '''
                     sed "s|IMAGE_PLACEHOLDER|$IMAGE:$TAG|" k8s/deployment.yaml | kubectl apply -f -
                     kubectl apply -f k8s/service.yaml
@@ -52,6 +58,7 @@ pipeline {
             }
         }
     }
+}
 
     post {
         success { echo "Deployed build ${env.BUILD_NUMBER}" }
