@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    environment {
+        // TODO: change to your Docker Hub username
+        IMAGE = "YOUR_DOCKERHUB_USERNAME/calculator-app"
+        TAG   = "${env.BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                sh 'docker build --build-arg APP_VERSION=$TAG -t $IMAGE:$TAG -t $IMAGE:latest .'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'docker run --rm $IMAGE:$TAG pytest -q'
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                // Jenkins credential of type "Username with password", id: dockerhub-creds
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                  usernameVariable: 'DH_USER',
+                                                  passwordVariable: 'DH_PASS')]) {
+                    sh '''
+                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
+                        docker push $IMAGE:$TAG
+                        docker push $IMAGE:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Minikube') {
+            steps {
+                sh '''
+                    sed "s|IMAGE_PLACEHOLDER|$IMAGE:$TAG|" k8s/deployment.yaml | kubectl apply -f -
+                    kubectl apply -f k8s/service.yaml
+                    kubectl rollout status deployment/calculator-app --timeout=120s
+                '''
+            }
+        }
+    }
+
+    post {
+        success { echo "Deployed build ${env.BUILD_NUMBER}" }
+        failure { echo "Pipeline failed" }
+    }
+}

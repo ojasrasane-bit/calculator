@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculator</title>
+<style>
+  :root { --bg:#eef1f5; --card:#fff; --ink:#14213d; --key:#e3e8f0; --op:#2b50ff; --eq:#1b9a68; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0f1626; --card:#172037; --ink:#e8ecf6; --key:#243052; --op:#5b74ff; --eq:#2fb583; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--ink);
+         font-family: "Segoe UI", system-ui, sans-serif; }
+  .calc { background:var(--card); padding:20px; border-radius:16px; width:min(320px, 92vw);
+          box-shadow:0 8px 30px rgba(0,0,0,.12); }
+  #display { background:var(--bg); border-radius:10px; padding:16px; text-align:right; font-size:2rem;
+             min-height:70px; overflow:hidden; word-break:break-all; }
+  .keys { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px; }
+  button { font-size:1.3rem; padding:16px 0; border:0; border-radius:10px; background:var(--key);
+           color:var(--ink); cursor:pointer; }
+  button:hover { filter:brightness(.95); }
+  button:focus-visible { outline:3px solid var(--op); outline-offset:2px; }
+  button.op { background:var(--op); color:#fff; }
+  button.eq { background:var(--eq); color:#fff; }
+  .foot { text-align:center; margin-top:14px; font-size:.85rem; opacity:.7; }
+</style>
+</head>
+<body>
+<main class="calc">
+  <div id="display" aria-live="polite">0</div>
+  <div class="keys">
+    <button onclick="clearAll()">C</button>
+    <button onclick="back()">&larr;</button>
+    <button class="op" onclick="setOp('/')">&divide;</button>
+    <button class="op" onclick="setOp('*')">&times;</button>
+    <button onclick="digit('7')">7</button><button onclick="digit('8')">8</button><button onclick="digit('9')">9</button>
+    <button class="op" onclick="setOp('-')">&minus;</button>
+    <button onclick="digit('4')">4</button><button onclick="digit('5')">5</button><button onclick="digit('6')">6</button>
+    <button class="op" onclick="setOp('+')">+</button>
+    <button onclick="digit('1')">1</button><button onclick="digit('2')">2</button><button onclick="digit('3')">3</button>
+    <button class="eq" onclick="equals()" style="grid-row:span 2">=</button>
+    <button onclick="digit('0')" style="grid-column:span 2">0</button>
+    <button onclick="digit('.')">.</button>
+  </div>
+  <div class="foot">Build v{{ version }}</div>
+</main>
+<script>
+  let current = "0", prev = null, op = null, fresh = false;
+  const display = document.getElementById("display");
+  const show = t => display.textContent = t;
+
+  function digit(d) {
+    if (fresh) { current = "0"; fresh = false; }
+    if (d === "." && current.includes(".")) return;
+    current = current === "0" && d !== "." ? d : current + d;
+    show(current);
+  }
+  function back() { current = current.length > 1 ? current.slice(0, -1) : "0"; show(current); }
+  function clearAll() { current = "0"; prev = null; op = null; show(current); }
+  async function setOp(o) {
+    if (op && !fresh) await equals();
+    prev = current; op = o; fresh = true;
+  }
+  async function equals() {
+    if (op === null || prev === null) return;
+    const res = await fetch("/api/calculate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ a: prev, b: current, op })
+    });
+    const data = await res.json();
+    if (!res.ok) { show(data.error); current = "0"; }
+    else { current = String(data.result); show(current); }
+    prev = null; op = null; fresh = true;
+  }
+</script>
+</body>
+</html>
