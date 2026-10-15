@@ -17,7 +17,7 @@ pipeline {
 
         stage('Build Image') {
             steps {
-                dir('Build Image'){
+                dir('calculator-cicd'){
                   sh 'docker build --build-arg APP_VERSION=$TAG -t $IMAGE:$TAG -t $IMAGE:latest .'
             }
         }
