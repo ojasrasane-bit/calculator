@@ -4,7 +4,7 @@ from flask import Flask, jsonify, render_template, request
 from calculator import calculate
 
 app = Flask(__name__)
-VERSION = os.environ.get("APP_VERSION", "1.0")
+VERSION = os.environ.get("APP_VERSION", "2.0")
 
 
 @app.route("/")
